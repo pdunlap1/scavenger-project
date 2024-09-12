@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>James' Scavenger Hunt</title>
+    <style>
+        body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f0f0f0;}
+        .container{max-width:800px;margin:0 auto;padding:20px;}
+        h1{text-align:center;color:#2c3e50;}
+        .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;}
+        .item{background-color:#fff;border-radius:8px;padding:15px;display:flex;align-items:center;box-shadow:0 2px 4px rgba(0,0,0,0.1);}
+        .icon{width:50px;height:50px;margin-right:15px;}
+        .checkbox{margin-right:15px;width:20px;height:20px;}
+        .name{flex-grow:1;}
+        .completed{text-decoration:line-through;color:#7f8c8d;}
+        #timer{text-align:center;font-size:24px;margin-bottom:20px;}
+        #prize-container{margin-top:20px;background-color:#fff;border-radius:8px;padding:15px;text-align:center;}
+        #prize-progress{width:100%;height:20px;background-color:#ecf0f1;border-radius:10px;overflow:hidden;margin-top:10px;}
+        #prize-fill{height:100%;width:0%;background-color:#2ecc71;transition:width 0.5s ease-in-out;}
+        #new-item-form{margin-top:20px;background-color:#fff;border-radius:8px;padding:15px;}
+        #new-item-form input[type="text"]{width:100%;padding:10px;margin-bottom:10px;border:1px solid #bdc3c7;border-radius:4px;}
+        #new-item-form button{background-color:#3498db;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;}
+        @keyframes celebrate{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
+        .celebrating{animation:celebrate 0.5s ease-in-out;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>James' Scavenger Hunt</h1>
+        <div id="timer">
+            <input type="number" id="time-input" min="1" value="60" style="width:50px;"> minutes
+            <button onclick="startTimer()">Start Timer</button>
+            <div id="time-display"></div>
+        </div>
+        <div class="grid" id="huntItems"></div>
+        <div id="prize-container">
+            <input type="text" id="prize-input" placeholder="Enter your prize here" style="width:100%;margin-bottom:10px;">
+            <div id="prize-progress"><div id="prize-fill"></div></div>
+        </div>
+        <div id="new-item-form">
+            <input type="text" id="new-item-input" placeholder="Enter a new item">
+            <button onclick="addNewItem()">Add Item</button>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <script>
+        const scavengerItems = [
+            {name:"A book",icon:'<svg viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" fill="#F1C40F"/><rect x="20" y="20" width="60" height="60" fill="#FFF"/><line x1="30" y1="30" x2="70" y2="30" stroke="#2C3E50" stroke-width="4"/><line x1="30" y1="40" x2="70" y2="40" stroke="#2C3E50" stroke-width="4"/><line x1="30" y1="50" x2="70" y2="50" stroke="#2C3E50" stroke-width="4"/><line x1="30" y1="60" x2="50" y2="60" stroke="#2C3E50" stroke-width="4"/></svg>'},
+            {name:"A pair of socks",icon:'<svg viewBox="0 0 100 100"><path d="M20,10 v50 q0,15 15,15 h10 q15,0 15,-15 v-35 h-30 v-15 z" fill="#E74C3C"/><path d="M70,10 v50 q0,15 15,15 h10 q15,0 15,-15 v-35 h-30 v-15 z" fill="#E74C3C" transform="translate(-40, 10) scale(0.8)"/><rect x="25" y="10" width="20" height="10" fill="#C0392B"/><rect x="55" y="20" width="16" height="8" fill="#C0392B"/></svg>'},
+            {name:"A stuffed animal",icon:'<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#D35400"/><circle cx="35" cy="40" r="8" fill="#FFF"/><circle cx="35" cy="40" r="4" fill="#000"/><circle cx="65" cy="40" r="8" fill="#FFF"/><circle cx="65" cy="40" r="4" fill="#000"/><ellipse cx="50" cy="70" rx="15" ry="10" fill="#E67E22"/><circle cx="30" cy="25" r="10" fill="#D35400"/><circle cx="70" cy="25" r="10" fill="#D35400"/></svg>'},
+            {name:"Something red",icon:'<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#FF6B6B"/><text x="50" y="55" font-size="14" text-anchor="middle" fill="#FFF">RED</text></svg>'},
+            {name:"A spoon",icon:'<svg viewBox="0 0 100 100"><circle cx="50" cy="30" r="25" fill="#D3D3D3"/><rect x="45" y="50" width="10" height="40" fill="#D3D3D3"/></svg>'},
+            {name:"A ball",icon:'<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#F39C12"/><path d="M 20 50 Q 50 20 80 50 Q 50 80 20 50" fill="none" stroke="#FFF" stroke-width="3"/></svg>'},
+            {name:"A toy car",icon:'<svg viewBox="0 0 100 100"><rect x="10" y="40" width="80" height="30" fill="#3498DB"/><circle cx="30" cy="70" r="15" fill="#34495E"/><circle cx="70" cy="70" r="15" fill="#34495E"/></svg>'},
+            {name:"Something noisy",icon:'<svg viewBox="0 0 100 100"><rect x="20" y="30" width="30" height="40" fill="#3498DB"/><path d="M50,30 l30,-15 v70 l-30,-15 z" fill="#3498DB"/><path d="M85,20 q15,30 0,60" stroke="#3498DB" stroke-width="5" fill="none"/><path d="M75,30 q10,20 0,40" stroke="#3498DB" stroke-width="5" fill="none"/></svg>'},
+            {name:"A hat",icon:'<svg viewBox="0 0 100 100"><path d="M10,70 q40,-60 80,0" fill="#2ECC71"/><rect x="5" y="70" width="90" height="10" fill="#2ECC71"/></svg>'},
+            {name:"A toothbrush",icon:'<svg viewBox="0 0 100 100"><rect x="20" y="70" width="60" height="10" rx="5" ry="5" fill="#2980B9"/><rect x="25" y="20" width="10" height="50" fill="#3498DB"/><rect x="40" y="20" width="10" height="50" fill="#3498DB"/><rect x="55" y="20" width="10" height="50" fill="#3498DB"/><rect x="70" y="20" width="10" height="50" fill="#3498DB"/><rect x="20" y="10" width="60" height="10" rx="5" ry="5" fill="#2980B9"/></svg>'},
+            {name:"A plant",icon:'<svg viewBox="0 0 100 100"><rect x="40" y="70" width="20" height="30" fill="#E67E22"/><path d="M50,70 q-20,-20 -30,-40 q30,20 30,40 q0,-20 30,-40 q-20,20 -30,40" fill="#27AE60"/></svg>'},
+            {name:"A pillow",icon:'<svg viewBox="0 0 100 100"><rect x="10" y="30" width="80" height="40" rx="20" ry="20" fill="#ECF0F1"/><line x1="20" y1="50" x2="80" y2="50" stroke="#BDC3C7" stroke-width="2"/><line x1="30" y1="40" x2="70" y2="40" stroke="#BDC3C7" stroke-width="2"/><line x1="30" y1="60" x2="70" y2="60" stroke="#BDC3C7" stroke-width="2"/></svg>'},
+            {name:"Something round",icon:'<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#F1C40F"/><text x="50" y="55" font-size="14" text-anchor="middle" fill="#FFF">ROUND</text></svg>'},
+            {name:"A fruit",icon:'<svg viewBox="0 0 100 100"><circle cx="50" cy="60" r="40" fill="#E74C3C"/><path d="M50,20 q-20,0 -20,20" stroke="#27AE60" stroke-width="4" fill="none"/></svg>'},
+            {name:"A crayon",icon:'<svg viewBox="0 0 100 100"><polygon points="30,95 40,5 60,5 70,95" fill="#E67E22"/><polygon points="40,5 60,5 55,15 45,15" fill="#D35400"/><polygon points="30,95 70,95 65,85 35,85" fill="#F39C12"/></svg>'}
+        ];
+        function createItemElement(item,index){const div=document.createElement('div');div.className='item';div.innerHTML=`<input type="checkbox" class="checkbox" id="item${index}"><div class="icon">${item.icon}</div><label class="name" for="item${index}">${item.name}</label>`;return div;}
+        function initializeHunt(){const huntItems=document.getElementById('huntItems');scavengerItems.forEach((item,index)=>{const itemElement=createItemElement(item,index);huntItems.appendChild(itemElement);});document.querySelectorAll('.checkbox').forEach(checkbox=>{checkbox.addEventListener('change',function(){this.parentElement.classList.toggle('celebrating',this.checked);this.nextElementSibling.nextElementSibling.classList.toggle('completed',this.checked);updatePrizeProgress();if(this.checked){confetti();}});});}
+        function startTimer(){const minutes=parseInt(document.getElementById('time-input').value);let totalSeconds=minutes*60;const timeDisplay=document.getElementById('time-display');const timerInterval=setInterval(()=>{const minutesLeft=Math.floor(totalSeconds/60);const secondsLeft=totalSeconds%60;timeDisplay.textContent=`${minutesLeft}:${secondsLeft<10?'0':''}${secondsLeft}`;if(totalSeconds<=0){clearInterval(timerInterval);timeDisplay.textContent="Time's up!";}else{totalSeconds--;}},1000);}
+        function updatePrizeProgress(){const totalItems=document.querySelectorAll('.checkbox').length;const checkedItems=document.querySelectorAll('.checkbox:checked').length;const progressPercentage=(checkedItems/totalItems)*100;document.getElementById('prize-fill').style.width=`${progressPercentage}%`;}
+        function addNewItem(){const newItemInput=document.getElementById('new-item-input');const newItemName=newItemInput.value.trim();if(newItemName){const newItem={name:newItemName,icon:'<svg viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" fill="#3498db"/><text x="50" y="60" font-size="40" text-anchor="middle" fill="#fff">New</text></svg>'};scavengerItems.push(newItem);const newIndex=scavengerItems.length-1;const newItemElement=createItemElement(newItem,newIndex);document.getElementById('huntItems').appendChild(newItemElement);newItemInput.value='';updatePrizeProgress();}}
+        window.addEventListener('load',initializeHunt);
+    </script>
+</body>
+</html>
